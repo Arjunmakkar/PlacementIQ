@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronDown, ChevronUp, ExternalLink, BookOpen, Code,
   Lightbulb, Clock, Target, CheckCircle2, Circle,
-  Trophy, Flame, RotateCcw, Filter, TrendingUp
+  Trophy, RotateCcw, TrendingUp, Filter
 } from 'lucide-react';
+import { DSA_TOPICS } from '../data/dsaData';
 
 const STORAGE_KEY = 'placementiq_dsa_solved';
 
@@ -28,20 +29,9 @@ function DSA() {
   }, [solvedSet]);
 
   useEffect(() => {
-    fetch('http://localhost:5001/dsa')
-      .then(res => res.json())
-      .then(data => {
-        const topicsArray = Object.keys(data).map(key => ({
-          name: key,
-          problems: data[key]
-        }));
-        setDsaTopics(topicsArray);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching DSA data:', err);
-        setLoading(false);
-      });
+    // Load static data immediately; optionally enhance with API data
+    setDsaTopics(DSA_TOPICS);
+    setLoading(false);
   }, []);
 
   // Unique key for each problem
@@ -78,15 +68,10 @@ function DSA() {
   const getTopicSolved = (topic) =>
     topic.problems.filter((_, i) => solvedSet.has(problemKey(topic.name, i))).length;
 
-  const getFilteredProblems = (problems) => {
-    if (difficultyFilter === 'all') return problems;
-    return problems.filter(p => p.difficulty.toLowerCase() === difficultyFilter);
-  };
-
-  const difficultyColors = {
-    easy: 'bg-green-50 border-green-100 text-green-600',
-    medium: 'bg-amber-50 border-amber-100 text-amber-600',
-    hard: 'bg-red-50 border-red-100 text-red-600',
+  const difficultyConfig = {
+    easy:   { label: 'Easy',   rowBg: 'bg-green-50/60 border-green-100', badge: 'bg-green-50 border-green-100 text-green-600',  header: 'bg-green-50 border-green-200 text-green-700',  dot: 'bg-green-500' },
+    medium: { label: 'Medium', rowBg: 'bg-amber-50/60 border-amber-100', badge: 'bg-amber-50 border-amber-100 text-amber-600',  header: 'bg-amber-50 border-amber-200 text-amber-700',  dot: 'bg-amber-500' },
+    hard:   { label: 'Hard',   rowBg: 'bg-red-50/60   border-red-100',   badge: 'bg-red-50   border-red-100   text-red-600',    header: 'bg-red-50   border-red-200   text-red-700',    dot: 'bg-red-500'   },
   };
 
   if (loading) {
@@ -171,66 +156,64 @@ function DSA() {
 
       {/* ── Controls Row ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-        {/* Difficulty filter */}
+        {/* Difficulty filter buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-semibold text-gray-500 mr-1">Filter:</span>
-          {['all', 'easy', 'medium', 'hard'].map(d => (
+          {[
+            { key: 'all',    label: 'All',    active: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/25' },
+            { key: 'easy',   label: 'Easy',   active: 'bg-green-500 text-white border-green-500' },
+            { key: 'medium', label: 'Medium', active: 'bg-amber-500 text-white border-amber-500' },
+            { key: 'hard',   label: 'Hard',   active: 'bg-red-500   text-white border-red-500' },
+          ].map(({ key, label, active }) => (
             <button
-              key={d}
-              onClick={() => setDifficultyFilter(d)}
+              key={key}
+              onClick={() => setDifficultyFilter(key)}
               className={`px-4 py-1.5 rounded-full text-sm font-bold capitalize transition-all border ${
-                difficultyFilter === d
-                  ? d === 'all'     ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/25'
-                  : d === 'easy'    ? 'bg-green-500 text-white border-green-500'
-                  : d === 'medium'  ? 'bg-amber-500 text-white border-amber-500'
-                                    : 'bg-red-500 text-white border-red-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                difficultyFilter === key ? active : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               }`}
             >
-              {d}
+              {label}
             </button>
           ))}
         </div>
 
         {/* Reset button */}
-        <div className="relative">
-          {showResetConfirm ? (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-2">
-              <span className="text-sm font-semibold text-red-600">Reset all progress?</span>
-              <button
-                onClick={handleReset}
-                className="text-xs font-bold bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors"
-              >
-                Yes, reset
-              </button>
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="text-xs font-bold text-gray-500 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowResetConfirm(true)}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset Progress
-            </button>
-          )}
-        </div>
+        {showResetConfirm ? (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-2">
+            <span className="text-sm font-semibold text-red-600">Reset all progress?</span>
+            <button onClick={handleReset} className="text-xs font-bold bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors">Yes, reset</button>
+            <button onClick={() => setShowResetConfirm(false)} className="text-xs font-bold text-gray-500 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset Progress
+          </button>
+        )}
       </div>
 
       {/* ── Topics List ── */}
       <div className="grid grid-cols-1 gap-5">
         {dsaTopics.map((topic, index) => {
           const topicSolved = getTopicSolved(topic);
-          const topicTotal = topic.problems.length;
-          const topicPct = topicTotal > 0 ? Math.round((topicSolved / topicTotal) * 100) : 0;
-          const filteredProblems = getFilteredProblems(topic.problems);
-          const isComplete = topicSolved === topicTotal && topicTotal > 0;
+          const topicTotal  = topic.problems.length;
+          const topicPct    = topicTotal > 0 ? Math.round((topicSolved / topicTotal) * 100) : 0;
+          const isComplete  = topicSolved === topicTotal && topicTotal > 0;
+
+          // Group problems by difficulty, filtered by active button
+          const groups = ['easy', 'medium', 'hard']
+            .filter(d => difficultyFilter === 'all' || difficultyFilter === d)
+            .map(diff => ({
+            diff,
+            ...difficultyConfig[diff],
+            items: topic.problems
+              .map((p, i) => ({ ...p, origIdx: i }))
+              .filter(p => p.difficulty.toLowerCase() === diff),
+          })).filter(g => g.items.length > 0);
 
           return (
             <div
@@ -239,7 +222,7 @@ function DSA() {
                 isComplete ? 'border-green-200 bg-green-50/30' : 'border-gray-100'
               }`}
             >
-              {/* Topic Header */}
+              {/* ── Topic Header ── */}
               <button
                 onClick={() => handleTopicClick(topic)}
                 className="w-full px-8 py-6 flex items-center justify-between text-left group"
@@ -259,9 +242,19 @@ function DSA() {
                         </span>
                       )}
                     </div>
-                    {/* Mini progress bar */}
-                    <div className="flex items-center gap-3 mt-2">
-                      <div className="w-32 bg-gray-100 rounded-full h-1.5">
+                    {/* Difficulty pills + mini progress */}
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      {['easy','medium','hard'].map(diff => {
+                        const cfg   = difficultyConfig[diff];
+                        const total = topic.problems.filter(p => p.difficulty.toLowerCase() === diff).length;
+                        if (!total) return null;
+                        return (
+                          <span key={diff} className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${cfg.badge}`}>
+                            {total} {cfg.label}
+                          </span>
+                        );
+                      })}
+                      <div className="w-24 bg-gray-100 rounded-full h-1.5">
                         <div
                           className={`h-1.5 rounded-full transition-all duration-500 ${
                             isComplete ? 'bg-green-500' : 'bg-blue-500'
@@ -287,83 +280,88 @@ function DSA() {
                 </div>
               </button>
 
-              {/* Problems List (expanded) */}
+              {/* ── Expanded Problems (grouped by difficulty) ── */}
               {selectedTopic === topic && (
                 <div className="px-8 pb-8 animate-in slide-in-from-top-4 duration-300">
                   <div className="h-px bg-gray-100 mb-6" />
 
-                  {filteredProblems.length === 0 ? (
-                    <p className="text-center text-gray-400 py-6 font-medium">
-                      No {difficultyFilter} problems in this topic.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {topic.problems.map((problem, pIdx) => {
-                        // When filter is active, hide non-matching problems
-                        if (difficultyFilter !== 'all' && problem.difficulty.toLowerCase() !== difficultyFilter) return null;
-
-                        const key = problemKey(topic.name, pIdx);
-                        const isSolved = solvedSet.has(key);
-                        const diffKey = problem.difficulty.toLowerCase();
-
-                        return (
-                          <div
-                            key={pIdx}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl transition-all border group ${
-                              isSolved
-                                ? 'bg-green-50/60 border-green-100'
-                                : 'bg-gray-50/50 border-transparent hover:bg-gray-50 hover:border-gray-100'
-                            }`}
-                          >
-                            <div className="flex items-center gap-4 mb-2 sm:mb-0 flex-1 min-w-0">
-                              {/* Solved toggle */}
-                              <button
-                                onClick={(e) => toggleSolved(topic.name, pIdx, e)}
-                                className="flex-shrink-0 transition-transform hover:scale-110 active:scale-95"
-                                title={isSolved ? 'Mark as unsolved' : 'Mark as solved'}
-                              >
-                                {isSolved
-                                  ? <CheckCircle2 className="w-6 h-6 text-green-500" />
-                                  : <Circle className="w-6 h-6 text-gray-300 hover:text-blue-400 transition-colors" />
-                                }
-                              </button>
-
-                              {/* Problem number */}
-                              <span className="w-7 h-7 flex-shrink-0 flex items-center justify-center bg-white rounded-lg text-xs font-bold text-gray-400 border border-gray-100">
-                                {pIdx + 1}
-                              </span>
-
-                              {/* Problem link */}
-                              <a
-                                href={problem.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`font-bold flex items-center gap-2 truncate transition-colors ${
-                                  isSolved ? 'text-green-700 line-through decoration-green-400/50' : 'text-gray-800 hover:text-blue-600'
-                                }`}
-                              >
-                                {problem.title}
-                                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </a>
+                  <div className="space-y-8">
+                    {groups.map(({ diff, label, dot, header, rowBg, badge, items }) => {
+                      const groupSolved = items.filter(p => solvedSet.has(problemKey(topic.name, p.origIdx))).length;
+                      return (
+                        <div key={diff}>
+                          {/* Difficulty section header */}
+                          <div className={`flex items-center justify-between px-4 py-2.5 rounded-2xl border mb-3 ${header}`}>
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+                              <span className="font-extrabold text-sm uppercase tracking-widest">{label}</span>
+                              <span className="text-xs font-semibold opacity-70">· {items.length} problem{items.length !== 1 ? 's' : ''}</span>
                             </div>
-
-                            <div className="flex items-center gap-3 pl-[88px] sm:pl-0">
-                              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-white border border-gray-100 rounded text-gray-500">
-                                {problem.platform}
-                              </span>
-                              <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded border ${
-                                difficultyColors[diffKey] || difficultyColors.easy
-                              }`}>
-                                {problem.difficulty}
-                              </span>
-                            </div>
+                            <span className="text-xs font-bold opacity-80">{groupSolved}/{items.length} solved</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
 
-                  {/* Topic footer stats */}
+                          {/* Problems in this difficulty */}
+                          <div className="space-y-2.5 pl-1">
+                            {items.map((problem) => {
+                              const key      = problemKey(topic.name, problem.origIdx);
+                              const isSolved = solvedSet.has(key);
+                              return (
+                                <div
+                                  key={problem.origIdx}
+                                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl transition-all border group ${
+                                    isSolved ? rowBg : 'bg-gray-50/50 border-transparent hover:bg-gray-50 hover:border-gray-100'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3 mb-2 sm:mb-0 flex-1 min-w-0">
+                                    {/* Solved toggle */}
+                                    <button
+                                      onClick={(e) => toggleSolved(topic.name, problem.origIdx, e)}
+                                      className="flex-shrink-0 transition-transform hover:scale-110 active:scale-95"
+                                      title={isSolved ? 'Mark as unsolved' : 'Mark as solved'}
+                                    >
+                                      {isSolved
+                                        ? <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                        : <Circle className="w-6 h-6 text-gray-300 hover:text-blue-400 transition-colors" />
+                                      }
+                                    </button>
+
+                                    {/* Original index badge */}
+                                    <span className="w-7 h-7 flex-shrink-0 flex items-center justify-center bg-white rounded-lg text-xs font-bold text-gray-400 border border-gray-100">
+                                      {problem.origIdx + 1}
+                                    </span>
+
+                                    {/* Problem link */}
+                                    <a
+                                      href={problem.link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`font-bold flex items-center gap-2 truncate transition-colors ${
+                                        isSolved ? 'text-green-700 line-through decoration-green-400/50' : 'text-gray-800 hover:text-blue-600'
+                                      }`}
+                                    >
+                                      {problem.title}
+                                      <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </a>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 pl-[82px] sm:pl-0">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-white border border-gray-100 rounded text-gray-500">
+                                      {problem.platform}
+                                    </span>
+                                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded border ${badge}`}>
+                                      {problem.difficulty}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Topic footer */}
                   <div className={`mt-6 flex items-center justify-between pt-4 border-t ${
                     isComplete ? 'border-green-100' : 'border-gray-100'
                   }`}>
